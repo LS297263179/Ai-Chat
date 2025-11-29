@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能聊天助手小麦</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.2.31/dist/vue.global.min.js"></script>
+    <style>
+        /* 保持所有原有样式不变 */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            transition: background-color 0.3s ease;
+        }
+
+        .message-user {
+            background-color: #3b82f6;
+            color: white;
+            border-radius: 18px 18px 4px 18px;
+        }
+
+        .message-assistant {
+            background-color: white;
+            color: #1e293b;
+            border: 1px solid #e2e8f0;
+            border-radius: 18px 18px 18px 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .dark .message-assistant {
+            background-color: #334155;
+            color: #f1f5f9;
+            border-color: #475569;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .pulse-dot {
+            animation: pulse 1.5s infinite;
+            background-color: #94a3b8;
+        }
+
+        .pulse-dot:nth-child(2) { animation-delay: 0.2s; }
+        .pulse-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.4; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        .avatar-user {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+
+        .avatar-assistant {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .sidebar-gradient {
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+        }
+
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+
+        .question-card {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .question-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .conversation-item {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .conversation-item:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* 固定侧边栏 */
+        .sidebar-container {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 16rem;
+            overflow-y: auto;
+            z-index: 40;
+        }
+
+        /* 隐藏侧边栏滚动条 */
+        .sidebar-container::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+            display: none;
+        }
+
+        .sidebar-container {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* 主内容区域适配固定侧边栏 */
+        .main-content {
+            margin-left: 16rem;
+            width: calc(100% - 16rem);
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .sidebar-container {
+                display: none;
+            }
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+        }
+
+        /* 固定顶部导航 */
+        .header-container {
+            position: sticky;
+            top: 0;
+            z-index: 30;
+            height: 4rem;
+        }
+
+        /* 底部输入框 */
+        .footer-container {
+            background-color: white;
+            border-top: 1px solid #e2e8f0;
+            padding: 1rem 0;
+        }
+
+        .dark .footer-container {
+            background-color: #1f2937;
+            border-top-color: #374151;
+        }
+
+        /* 聊天区域高度 */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 1rem;
+        }
+
+        /* 隐藏滚动条 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* 滚动平滑 */
+        .scroll-smooth {
+            scroll-behavior: smooth;
+        }
+
+        /* 滚动锚点 */
+        .scroll-anchor {
+            height: 1px;
+            margin-bottom: 1rem;
+        }
+
+        /* 底部输入区域 */
+        .input-container {
+            background-color: white;
+            border-top: 1px solid #e2e8f0;
+            padding: 1rem 0;
+        }
+
+        .dark .input-container {
+            background-color: #1f2937;
+            border-top-color: #374151;
+        }
+
+        /* 头像样式 */
+        .avatar-container {
+            border-radius: 50%;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .avatar-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* 新增：打字机效果容器 */
+        .typing-container {
+            display: inline-block;
+            min-height: 1.5em; /* 确保即使没有内容也有最小高度 */
+        }
+
+        /* 新增：光标闪烁效果 */
+        /*.typing-cursor {*/
+        /*    display: inline-block;*/
+        /*    width: 2px;*/
+        /*    height: 1.2em;*/
+        /*    background-color: #3b82f6;*/
+        /*    margin-left: 2px;*/
+        /*    animation: blink 1s infinite;*/
+        /*    vertical-align: middle;*/
+        /*}*/
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+<div id="app" class="min-h-screen flex transition-colors duration-300">
+    <!-- 侧边栏 -->
+    <aside class="sidebar-gradient sidebar-container text-white flex flex-col hidden md:flex transition-colors duration-300">
+        <div class="p-6 border-b border-gray-700">
+            <div class="flex items-center space-x-3">
+                <div class="avatar-container w-8 h-8">
+                    <img src="/images/1.jpg" class="avatar-img" alt="小麦头像">
+                </div>
+                <h1 class="text-xl font-bold">好运常在</h1>
+            </div>
+            <p class="text-gray-400 text-sm mt-2">好运正在路上 请保持期待的心情</p>
+        </div>
+
+        <div class="p-4 border-b border-gray-700">
+            <button @click="startNewConversation" class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium transition-colors flex items-center justify-center space-x-2">
+                <i class="fas fa-plus"></i>
+                <span>新建对话</span>
+            </button>
+        </div>
+
+        <div class="flex-1 p-4">
+            <h3 class="text-gray-400 text-xs font-semibold uppercase mb-3">你可以问任何你感兴趣的内容，比如：</h3>
+            <div class="space-y-2">
+                <div v-for="(conv, index) in recentConversations" :key="index"
+                     @click="askQuestion(conv.question)"
+                     class="p-3 rounded-lg cursor-pointer transition-colors text-sm conversation-item">
+                    <div class="font-medium truncate">{{ conv.title }}</div>
+                    <div class="text-gray-400 text-xs truncate">{{ conv.preview }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4 border-t border-gray-700">
+            <div class="flex items-center space-x-3 p-3 rounded-lg bg-gray-800">
+                <div class="avatar-container w-8 h-8">
+                    <img src="/images/4.jpeg" class="avatar-img" alt="用户头像">
+                </div>
+                <div class="flex-1">
+                    <div class="text-sm font-medium">欢迎您：小陆</div>
+                    <div class="text-xs text-gray-400">初测版</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 主内容区域 -->
+    <main class="flex-1 flex flex-col transition-colors duration-300 main-content chat-container">
+        <!-- 顶部导航 -->
+        <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-3 px-6 flex items-center justify-between transition-colors duration-300 header-container">
+            <div class="flex items-center space-x-4">
+                <button class="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <i class="fas fa-bars text-gray-600 dark:text-gray-300"></i>
+                </button>
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-white">欢迎使用你的智能聊天助手小麦</h2>
+                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">在线</span>
+            </div>
+        </header>
+
+        <!-- 聊天内容区域 -->
+        <div class="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-4 transition-colors duration-300 chat-area scroll-smooth" ref="chatContainer" @scroll="handleScroll">
+            <div class="max-w-3xl mx-auto space-y-6">
+                <!-- 欢迎消息 -->
+                <div v-if="messages.length === 0" class="text-center py-12">
+                    <div class="avatar-container w-16 h-16 bg-blue-100 dark:bg-blue-900 mx-auto mb-4">
+                        <img src="/images/2.jpg" class="avatar-img" alt="小麦头像">
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">今天想要聊些什么？</h2>
+                    <p class="text-gray-600 dark:text-gray-400 mb-6">体验全新场景模型</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-lg mx-auto mb-8">
+                        <div @click="askQuestion('帮我写一篇关于春天的短文')"
+                             class="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 text-center question-card">
+                            <i class="fas fa-lightbulb text-blue-500 text-xl mb-2"></i>
+                            <h3 class="font-medium text-gray-800 dark:text-white">创意写作</h3>
+                        </div>
+                        <div @click="askQuestion('用Python写一个快速排序算法')"
+                             class="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 text-center question-card">
+                            <i class="fas fa-code text-blue-500 text-xl mb-2"></i>
+                            <h3 class="font-medium text-gray-800 dark:text-white">代码编程</h3>
+                        </div>
+                        <div @click="askQuestion('请解释一下什么是人工智能')"
+                             class="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 text-center question-card">
+                            <i class="fas fa-question-circle text-blue-500 text-xl mb-2"></i>
+                            <h3 class="font-medium text-gray-800 dark:text-white">问题解答</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 消息列表 -->
+                <div v-for="(message, index) in messages" :key="index" class="fade-in">
+                    <div :class="['flex', message.role === 'user' ? 'justify-end' : 'justify-start']">
+                        <div class="flex items-start max-w-[80%] space-x-3" :class="message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''">
+                            <!-- 头像 -->
+                            <div class="flex-shrink-0">
+                                <div class="avatar-container w-8 h-8">
+                                    <img
+                                            :src="message.role === 'user' ? '/images/4.jpeg' : '/images/2.jpg'"
+                                            alt="头像"
+                                            class="avatar-img"
+                                    />
+                                </div>
+                            </div>
+
+                            <!-- 消息内容 -->
+                            <div class="flex-1">
+                                <div :class="['px-4 py-3',
+                                            message.role === 'user' ? 'message-user' : 'message-assistant']">
+                                    <!-- 加载动画 -->
+                                    <div v-if="message.role === 'assistant' && message.isLoading"
+                                         class="flex items-center space-x-2 py-1">
+                                        <div class="pulse-dot w-2 h-2 rounded-full"></div>
+                                        <div class="pulse-dot w-2 h-2 rounded-full"></div>
+                                        <div class="pulse-dot w-2 h-2 rounded-full"></div>
+                                    </div>
+
+                                    <!-- 消息内容 - 修改为真正的打字机效果 -->
+                                    <div v-else-if="message.role === 'assistant'" class="typing-container">
+                                        <span class="whitespace-pre-wrap leading-relaxed">{{ message.displayContent }}</span>
+                                        <span v-if="message.isTyping && !message.isComplete" class="typing-cursor"></span>
+                                    </div>
+
+                                    <!-- 用户消息保持不变 -->
+                                    <div v-else class="whitespace-pre-wrap leading-relaxed">
+                                        {{ message.content }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 底部锚点元素，用于自动滚动 -->
+                <div ref="scrollAnchor" class="scroll-anchor"></div>
+            </div>
+        </div>
+
+        <!-- 输入框区域 -->
+        <footer class="input-container transition-colors duration-300">
+            <div class="max-w-3xl mx-auto px-6">
+                <div class="flex items-end space-x-3">
+                    <textarea
+                            v-model="userInput"
+                            @keydown.enter.exact.prevent="sendMessage"
+                            @keydown.ctrl.enter.exact.prevent="userInput += '\n'"
+                            @keydown.esc.exact="stopResponse"
+                            placeholder="输入您的问题..."
+                            class="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none transition-colors duration-300 no-scrollbar"
+                            rows="1"
+                            ref="textarea"
+                            @input="adjustTextareaHeight"
+                    ></textarea>
+
+                    <button
+                            @click="isLoading ? stopResponse() : sendMessage()"
+                            :disabled="!userInput.trim() && !isLoading"
+                            :class="['p-2 rounded-lg transition-colors flex-shrink-0',
+                                isLoading
+                                    ? 'bg-red-500 hover:bg-red-600 text-white'
+                                    : 'btn-primary',
+                                'disabled:opacity-50 disabled:cursor-not-allowed']"
+                    >
+                        <i :class="isLoading ? 'fas fa-stop' : 'fas fa-paper-plane'"></i>
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    <div>
+                        <span class="inline-flex items-center space-x-1">
+                            <span>感谢您的使用</span>
+                        </span>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span>按 Enter 发送，Ctrl+Enter 换行</span>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </main>
+</div>
+
+<script>
+    const {createApp, ref, nextTick, onMounted, watch} = Vue;
+
+    createApp({
+        setup() {
+            const messages = ref([]);
+            const userInput = ref('');
+            const isLoading = ref(false);
+            const chatContainer = ref(null);
+            const textarea = ref(null);
+            const scrollAnchor = ref(null);
+            const darkMode = ref(false);
+            const recentConversations = ref([
+                { title: "如何学习编程", preview: "从基础开始...", question: "如何从零开始学习编程？" },
+                { title: "创意写作建议", preview: "关于科幻小说的...", question: "请给我一些科幻小说创作的灵感" },
+                { title: "代码调试帮助", preview: "Python代码问题...", question: "如何调试Python代码中的错误？" },
+                { title: "旅行计划建议", preview: "制定旅行计划...", question: "请帮我制定一个三天的北京旅行计划" },
+                { title: "健康饮食建议", preview: "健康饮食方案...", question: "请给我一些健康饮食的建议" }
+            ]);
+
+            const memoeryId = ref(Date.now().toString());
+            let controller = null;
+            let typingInterval = null;
+            let typewriterInterval = null;
+
+            // 用户滚动状态跟踪
+            const userHasScrolled = ref(false);
+            const lastScrollTop = ref(0);
+
+            // 调整文本区域高度
+            const adjustTextareaHeight = () => {
+                const textareaEl = textarea.value;
+                textareaEl.style.height = 'auto';
+                textareaEl.style.height = `${Math.min(textareaEl.scrollHeight, 120)}px`;
+            };
+
+            // 处理滚动事件
+            const handleScroll = () => {
+                if (!chatContainer.value) return;
+
+                const currentScrollTop = chatContainer.value.scrollTop;
+
+                // 如果用户向上滚动（查看历史消息），标记为用户手动滚动
+                if (currentScrollTop < lastScrollTop.value) {
+                    userHasScrolled.value = true;
+                }
+
+                // 如果用户滚动到底部，清除手动滚动标记
+                const containerHeight = chatContainer.value.clientHeight;
+                const scrollHeight = chatContainer.value.scrollHeight;
+                const threshold = 100; // 距离底部100px以内视为底部
+
+                if (currentScrollTop + containerHeight >= scrollHeight - threshold) {
+                    userHasScrolled.value = false;
+                }
+
+                lastScrollTop.value = currentScrollTop;
+            };
+
+            // 滚动到底部
+            const scrollToBottom = () => {
+                nextTick(() => {
+                    if (scrollAnchor.value) {
+                        scrollAnchor.value.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'end'
+                        });
+                    }
+                });
+            };
+
+            // 强制滚动到底部
+            const forceScrollToBottom = () => {
+                nextTick(() => {
+                    if (scrollAnchor.value) {
+                        scrollAnchor.value.scrollIntoView({
+                            behavior: 'instant',
+                            block: 'end'
+                        });
+                    }
+                });
+            };
+
+            // 智能滚动 - 只在用户没有手动滚动时自动滚动
+            const smartScrollToBottom = () => {
+                if (!userHasScrolled.value) {
+                    forceScrollToBottom();
+                }
+            };
+
+            // 切换暗黑模式
+            const toggleDarkMode = () => {
+                darkMode.value = !darkMode.value;
+                document.documentElement.classList.toggle('dark', darkMode.value);
+                localStorage.setItem('darkMode', darkMode.value);
+                document.body.classList.toggle('dark', darkMode.value);
+            };
+
+            // 新建会话
+            const startNewConversation = () => {
+                messages.value = [];
+                memoeryId.value = Date.now().toString();
+                userHasScrolled.value = false; // 重置滚动状态
+
+                // 添加欢迎消息
+                setTimeout(() => {
+                    messages.value.push({
+                        role: 'assistant',
+                        content: '你好！我是你的智能聊天助手小麦，很高兴为您服务。有什么我可以帮助您的吗？',
+                        isLoading: false,
+                        displayContent: '',
+                        isTyping: false,
+                        isComplete: true
+                    });
+
+                    // 直接显示完整欢迎消息，不需要打字效果
+                    messages.value[0].displayContent = messages.value[0].content;
+                    forceScrollToBottom();
+                }, 300);
+
+                nextTick(() => {
+                    textarea.value.focus();
+                });
+            };
+
+            // 点击问题卡片或最近对话
+            const askQuestion = (question) => {
+                userInput.value = question;
+                setTimeout(() => {
+                    sendMessage();
+                }, 100);
+            };
+
+            // 打字机效果 - 新增函数
+            const startTypewriterEffect = (messageIndex) => {
+                const message = messages.value[messageIndex];
+                if (!message || message.displayContent.length >= message.content.length) {
+                    clearInterval(typewriterInterval);
+                    typewriterInterval = null;
+                    messages.value[messageIndex].isTyping = false;
+                    messages.value[messageIndex].isComplete = true;
+                    return;
+                }
+
+                // 每次增加一个字符
+                const nextChar = message.content[message.displayContent.length];
+                messages.value[messageIndex].displayContent += nextChar;
+
+                // 只在用户没有手动滚动时自动滚动
+                smartScrollToBottom();
+            };
+
+            // 发送消息 - 修改为使用真正的打字机效果
+            const sendMessage = async () => {
+                if (!userInput.value.trim() || isLoading.value) return;
+
+                if (controller) {
+                    controller.abort();
+                }
+                controller = new AbortController();
+
+                const userMessage = {
+                    role: 'user',
+                    content: userInput.value.trim(),
+                    isLoading: false
+                };
+
+                messages.value.push(userMessage);
+
+                const assistantMessage = {
+                    role: 'assistant',
+                    content: '',
+                    isLoading: true,
+                    displayContent: '', // 新增：用于显示的内容
+                    isTyping: false,    // 新增：是否正在打字
+                    isComplete: false   // 新增：是否完成
+                };
+
+                messages.value.push(assistantMessage);
+
+                userInput.value = '';
+                adjustTextareaHeight();
+
+                // 发送消息后重置滚动状态并强制滚动到底部
+                userHasScrolled.value = false;
+                forceScrollToBottom();
+
+                isLoading.value = true;
+
+                try {
+                    const response = await fetch(`/chat?message=${encodeURIComponent(userMessage.content)}&memoryId=${memoeryId.value}`, {
+                        signal: controller.signal
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder('utf-8');
+                    let buffer = '';
+                    let messageIndex = messages.value.length - 1;
+
+                    // 清除之前的打字效果
+                    if (typewriterInterval) {
+                        clearInterval(typewriterInterval);
+                        typewriterInterval = null;
+                    }
+
+                    while (true) {
+                        const {done, value} = await reader.read();
+                        if (done) break;
+
+                        const chunk = decoder.decode(value, {stream: true});
+                        buffer += chunk;
+
+                        // 更新消息内容
+                        messages.value[messageIndex].content = buffer;
+                        messages.value[messageIndex].isLoading = false;
+
+                        // 如果没有启动打字效果，则启动
+                        if (!typewriterInterval && buffer.length > 0) {
+                            messages.value[messageIndex].isTyping = true;
+                            typewriterInterval = setInterval(() => {
+                                startTypewriterEffect(messageIndex);
+                            }, 30); // 控制打字速度
+                        }
+
+                        // 只在用户没有手动滚动时自动滚动
+                        smartScrollToBottom();
+                    }
+
+                } catch (error) {
+                    if (error.name === 'AbortError') {
+                        console.log('请求被用户中止');
+                    } else {
+                        console.error('请求出错:', error);
+                        const lastMessage = messages.value[messages.value.length - 1];
+                        lastMessage.content = '抱歉，请求过程中出现错误: ' + error.message;
+                        lastMessage.displayContent = lastMessage.content;
+                        lastMessage.isLoading = false;
+                        lastMessage.isTyping = false;
+                        lastMessage.isComplete = true;
+                    }
+                } finally {
+                    const lastMessage = messages.value[messages.value.length - 1];
+                    lastMessage.isLoading = false;
+
+                    // 确保内容完整显示
+                    if (lastMessage.displayContent.length < lastMessage.content.length) {
+                        lastMessage.displayContent = lastMessage.content;
+                        lastMessage.isTyping = false;
+                        lastMessage.isComplete = true;
+                    }
+
+                    isLoading.value = false;
+                    controller = null;
+
+                    if (typewriterInterval) {
+                        clearInterval(typewriterInterval);
+                        typewriterInterval = null;
+                    }
+
+                    // 最终确保滚动到底部，但只在用户没有手动滚动时
+                    smartScrollToBottom();
+                }
+            };
+
+            // 停止响应
+            const stopResponse = () => {
+                if (controller) {
+                    controller.abort();
+                    const lastMessage = messages.value[messages.value.length - 1];
+                    lastMessage.isLoading = false;
+
+                    // 确保内容完整显示
+                    if (lastMessage.displayContent.length < lastMessage.content.length) {
+                        lastMessage.displayContent = lastMessage.content;
+                    }
+
+                    lastMessage.isTyping = false;
+                    lastMessage.isComplete = true;
+
+                    isLoading.value = false;
+                    controller = null;
+
+                    if (typewriterInterval) {
+                        clearInterval(typewriterInterval);
+                        typewriterInterval = null;
+                    }
+
+                    smartScrollToBottom();
+                }
+            };
+
+            // 初始化
+            onMounted(() => {
+                darkMode.value = localStorage.getItem('darkMode') === 'true' ||
+                    (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+                document.documentElement.classList.toggle('dark', darkMode.value);
+                document.body.classList.toggle('dark', darkMode.value);
+
+                // 如果没有消息，显示欢迎界面
+                if (messages.value.length === 0) {
+                    // 欢迎界面已经在模板中定义
+                }
+
+                nextTick(() => {
+                    textarea.value.focus();
+                    forceScrollToBottom();
+                });
+            });
+
+            return {
+                messages,
+                userInput,
+                isLoading,
+                darkMode,
+                recentConversations,
+                chatContainer,
+                textarea,
+                scrollAnchor,
+                sendMessage,
+                stopResponse,
+                toggleDarkMode,
+                adjustTextareaHeight,
+                startNewConversation,
+                askQuestion,
+                handleScroll
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>

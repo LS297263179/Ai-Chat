@@ -1,0 +1,26 @@
+langchain4j:
+  open-ai:
+    chat-model:
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api-key: ${API-KEY}
+      model-name: qwen-plus
+      log-requests: true
+      log-responses: true
+    # 流式调用 ai回复不是直接生成最后的结果 而是一部分一部分的生成
+    streaming-chat-model:
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api-key: ${API-KEY}
+      model-name: qwen-plus
+      log-requests: true
+      log-responses: true
+
+logging:
+  level:
+    dev.langchain4j: debug
+
+# redis连接信息
+spring:
+  data:
+    redis:
+      host: 101.43.88.226
+      port: 6379
